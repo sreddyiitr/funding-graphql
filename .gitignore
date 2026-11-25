@@ -1,0 +1,40 @@
+# Maven build output
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+.mvn/wrapper/maven-wrapper.jar
+
+# Java
+*.class
+*.log
+hs_err_pid*
+replay_pid*
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+bin/
+out/
+
+# macOS
+.DS_Store
+
+# Local environment / secrets
+.env
+.env.*
+!.env.example
+application-local.yml
+application-local.properties
+
+# Claude Code local settings
+.claude/settings.local.json

@@ -1,0 +1,22 @@
+services:
+  funding-graphql:
+    build: .
+    container_name: funding-graphql
+    ports:
+      - "4000:4000"
+    environment:
+      # "funder-postgres" resolves via Docker DNS because both containers share the network below.
+      DB_HOST: funder-postgres
+      DB_PORT: "5432"
+      DB_NAME: auto_funding_db
+      DB_USER: funder_admin
+      DB_PASSWORD: funder_dev_password
+    networks:
+      - funding-db
+    restart: unless-stopped
+
+networks:
+  # The network created by the funding-db compose project (where funder-postgres lives).
+  funding-db:
+    external: true
+    name: funding-db_default

@@ -1,0 +1,183 @@
+scalar DateTime
+scalar Date
+scalar BigDecimal
+scalar JSON
+
+enum ApplicationFundingStatus {
+  READY_TO_FUND
+  PENDING_STIPULATIONS
+  PENDING_AGENT_VERIFICATION
+  EXCEPTION_HOLD
+  FUNDED
+  EXPIRED
+  DECLINED
+  WITHDRAWN
+}
+
+enum FundingTaskStatus { VERIFIED PENDING_REVIEW DISCREPANCY_FLAGGED WAIVED EXPIRED }
+
+enum FundingTaskCategory {
+  VIN_VERIFICATION
+  GAP_FORM_VERIFICATION
+  INCOME_VERIFICATION
+  TITLE_AND_LIEN
+  TILA_RECONCILIATION
+  INSURANCE_BINDER
+  OTHER
+}
+
+enum ActorRole { FUNDER SYSTEM DEALER_FI UNDERWRITER }
+enum VehicleCondition { NEW USED CPO }
+
+type Query {
+  applications(status: ApplicationFundingStatus, dealerId: String, limit: Int = 25, offset: Int = 0): [Application!]!
+  application(applicationId: String!): Application
+  fundingTask(taskId: String!): FundingTask
+  dealers: [Dealer!]!
+  actors: [Actor!]!
+}
+
+type Mutation {
+  "Change an application's status and record an activity event."
+  updateApplicationStatus(input: UpdateApplicationStatusInput!): Application!
+  "Change a funding task's status and record an activity event."
+  updateFundingTaskStatus(input: UpdateFundingTaskStatusInput!): FundingTask!
+  "Append a free-form activity event to an application."
+  addActivityEvent(input: AddActivityEventInput!): ActivityEvent!
+}
+
+input UpdateApplicationStatusInput {
+  applicationId: String!
+  status: ApplicationFundingStatus!
+  actor: String!
+  details: String
+}
+
+input UpdateFundingTaskStatusInput {
+  taskId: String!
+  status: FundingTaskStatus!
+  actor: String!
+  details: String
+}
+
+input AddActivityEventInput {
+  applicationId: String!
+  taskId: String
+  actor: String!
+  action: String!
+  details: String
+  metadata: JSON
+}
+
+type Application {
+  applicationId: String!
+  dealNumber: String!
+  dealerId: String!
+  dealerNameSnapshot: String!
+  stateCode: String!
+  submittedAt: DateTime!
+  slaMinutesRemaining: Int!
+  slaCutoffAt: DateTime
+  expiresAt: DateTime
+  status: ApplicationFundingStatus!
+  fundedAt: DateTime
+  updatedAt: DateTime!
+  dealer: Dealer
+  applicant: Applicant
+  vehicle: Vehicle
+  loanTerms: LoanTerms
+  tasks(status: FundingTaskStatus): [FundingTask!]!
+  riscLineItems: [RiscLineItem!]!
+  activity(limit: Int = 50): [ActivityEvent!]!
+}
+
+type Dealer {
+  dealerId: String!
+  legalName: String!
+  dbaName: String
+  eltLienholderCode: String
+  stateCode: String
+}
+
+type Applicant {
+  fullName: String!
+  coApplicantName: String
+  ssnLast4: String!
+  dateOfBirth: Date!
+  phone: String
+  email: String
+  addressLine1: String!
+  city: String
+  stateCode: String
+  postalCode: String
+  ficoScore: Int
+  statedMonthlyIncome: BigDecimal!
+  verifiedMonthlyIncome: BigDecimal
+}
+
+type Vehicle {
+  modelYear: Int!
+  make: String!
+  model: String!
+  trim: String
+  vin: String!
+  mileage: Int!
+  condition: VehicleCondition!
+}
+
+type LoanTerms {
+  amountFinanced: BigDecimal!
+  cashPrice: BigDecimal!
+  downPayment: BigDecimal!
+  tradeAllowance: BigDecimal!
+  gapProductPrice: BigDecimal!
+  gapFormNumber: String
+  apr: BigDecimal!
+  termMonths: Int!
+  monthlyPayment: BigDecimal!
+  ltvPercent: BigDecimal
+  dtiPercent: BigDecimal
+}
+
+type FundingTask {
+  taskId: String!
+  applicationId: String!
+  category: FundingTaskCategory!
+  title: String!
+  description: String!
+  status: FundingTaskStatus!
+  verifiedBy: String
+  sourceComparison: JSON
+  ocrEvidence: JSON
+  stipulation: JSON
+  updatedAt: DateTime!
+}
+
+type RiscLineItem {
+  lineItemId: String!
+  bucket: String!
+  itemType: String!
+  description: String!
+  formNumber: String
+  payeeName: String
+  amount: BigDecimal!
+  lineOrder: Int!
+  isVerified: Boolean!
+}
+
+type ActivityEvent {
+  eventId: String!
+  applicationId: String!
+  occurredAt: DateTime!
+  taskId: String
+  actor: String!
+  role: ActorRole!
+  action: String!
+  details: String
+  metadata: JSON
+}
+
+type Actor {
+  actorName: String!
+  role: ActorRole!
+}
