@@ -30,7 +30,22 @@ enum ActorRole { FUNDER SYSTEM DEALER_FI UNDERWRITER }
 enum VehicleCondition { NEW USED CPO }
 
 type Query {
-  applications(status: ApplicationFundingStatus, dealerId: String, limit: Int = 25, offset: Int = 0): [Application!]!
+  """
+  List applications, newest first. Every filter is optional; filters combine with AND.
+  statuses: match any of these statuses (intersected with status when both are given).
+  search: case-insensitive partial match on applicationId or dealNumber.
+  taskCategory / taskStatus: keep applications with at least one task matching both.
+  """
+  applications(
+    status: ApplicationFundingStatus
+    statuses: [ApplicationFundingStatus!]
+    dealerId: String
+    search: String
+    taskCategory: FundingTaskCategory
+    taskStatus: FundingTaskStatus
+    limit: Int = 25
+    offset: Int = 0
+  ): [Application!]!
   application(applicationId: String!): Application
   fundingTask(taskId: String!): FundingTask
   dealers: [Dealer!]!

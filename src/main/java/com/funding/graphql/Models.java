@@ -9,6 +9,10 @@ import java.util.Map;
 public final class Models {
     private Models() {}
 
+    /** Optional filters for the applications query; null means "not filtered". */
+    public record ApplicationFilter(String status, java.util.List<String> statuses, String dealerId, String search,
+                                    String taskCategory, String taskStatus) {}
+
     public record Application(String applicationId, String dealNumber, String dealerId, String dealerNameSnapshot,
                               String stateCode, OffsetDateTime submittedAt, int slaMinutesRemaining,
                               OffsetDateTime slaCutoffAt, OffsetDateTime expiresAt, String status,
