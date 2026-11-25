@@ -67,6 +67,37 @@ class FundingGraphqlE2ETest {
         assertThat(ids).containsExactly("app_2");
     }
 
+    private List<String> applicationIds(String args) {
+        return client.document("{ applications(" + args + ") { applicationId } }")
+                .retrieveSync("applications").toEntityList(Map.class)
+                .stream().map(m -> (String) m.get("applicationId")).toList();
+    }
+
+    @Test
+    void filtersApplicationsByStatusList() {
+        assertThat(applicationIds("statuses: [PENDING_STIPULATIONS, READY_TO_FUND]"))
+                .containsExactly("app_1", "app_2", "app_3");
+        assertThat(applicationIds("statuses: [PENDING_STIPULATIONS]")).containsExactly("app_2");
+        // status AND statuses -> intersection
+        assertThat(applicationIds("status: READY_TO_FUND, statuses: [PENDING_STIPULATIONS]")).isEmpty();
+    }
+
+    @Test
+    void filtersApplicationsByTaskCategoryAndTaskStatus() {
+        assertThat(applicationIds("taskCategory: INCOME_VERIFICATION")).containsExactly("app_1");
+        assertThat(applicationIds("taskStatus: DISCREPANCY_FLAGGED")).containsExactly("app_2");
+        // both must hold on the same task
+        assertThat(applicationIds("taskCategory: VIN_VERIFICATION, taskStatus: PENDING_REVIEW")).isEmpty();
+        assertThat(applicationIds("taskCategory: TITLE_AND_LIEN, statuses: [READY_TO_FUND]")).isEmpty();
+    }
+
+    @Test
+    void searchesApplicationsByIdOrDealNumber() {
+        assertThat(applicationIds("search: \"APP_3\"")).containsExactly("app_3");
+        assertThat(applicationIds("search: \"d-002\"")).containsExactly("app_2");
+        assertThat(applicationIds("search: \"%\"")).isEmpty();   // wildcard is literal
+    }
+
     @Test
     void resolvesNestedApplicationGraph() {
         ClientGraphQlResponse res = client.document("""

@@ -20,9 +20,12 @@ public class FundingController {
     // ------------------------------------------------------------------ Query
 
     @QueryMapping
-    public List<Application> applications(@Argument String status, @Argument String dealerId,
+    public List<Application> applications(@Argument String status, @Argument List<String> statuses,
+                                          @Argument String dealerId, @Argument String search,
+                                          @Argument String taskCategory, @Argument String taskStatus,
                                           @Argument int limit, @Argument int offset) {
-        return repo.findApplications(status, dealerId, limit, offset);
+        var filter = new ApplicationFilter(status, statuses, dealerId, search, taskCategory, taskStatus);
+        return repo.findApplications(filter, limit, offset);
     }
 
     @QueryMapping

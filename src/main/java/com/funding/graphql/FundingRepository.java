@@ -37,18 +37,48 @@ public class FundingRepository {
 
     // ------------------------------------------------------------------ queries
 
-    public List<Application> findApplications(String status, String dealerId, int limit, int offset) {
-        return jdbc.sql("SELECT " + APP_COLS + """
-                         FROM applications
-                        WHERE (CAST(:status AS application_funding_status) IS NULL OR status = CAST(:status AS application_funding_status))
-                          AND (CAST(:dealerId AS text) IS NULL OR dealer_id = :dealerId)
-                        ORDER BY submitted_at DESC
-                        LIMIT :limit OFFSET :offset""")
-                .param("status", status)
-                .param("dealerId", dealerId)
-                .param("limit", Math.min(Math.max(limit, 1), 200))
-                .param("offset", Math.max(offset, 0))
-                .query(Application.class).list();
+    public List<Application> findApplications(ApplicationFilter f, int limit, int offset) {
+        // A condition is added only for a filter that is set; values are always bound, never concatenated.
+        List<String> where = new ArrayList<>();
+        Map<String, Object> params = new HashMap<>();
+
+        Set<String> statuses = null;
+        if (f.statuses() != null && !f.statuses().isEmpty()) {
+            statuses = new LinkedHashSet<>(f.statuses());
+            if (f.status() != null) statuses.retainAll(Set.of(f.status()));   // AND with status
+            if (statuses.isEmpty()) return List.of();
+        } else if (f.status() != null) {
+            statuses = Set.of(f.status());
+        }
+        if (statuses != null) {
+            where.add("status::text IN (:statuses)");
+            params.put("statuses", statuses);
+        }
+        if (f.dealerId() != null) {
+            where.add("dealer_id = :dealerId");
+            params.put("dealerId", f.dealerId());
+        }
+        if (f.search() != null && !f.search().isBlank()) {
+            String escaped = f.search().trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
+            where.add("(application_id ILIKE :search OR deal_number ILIKE :search)");
+            params.put("search", "%" + escaped + "%");
+        }
+        if (f.taskCategory() != null || f.taskStatus() != null) {
+            where.add("""
+                    EXISTS (SELECT 1 FROM funding_tasks t
+                             WHERE t.application_id = applications.application_id
+                               AND (CAST(:taskCategory AS funding_task_category) IS NULL OR t.category = CAST(:taskCategory AS funding_task_category))
+                               AND (CAST(:taskStatus AS funding_task_status) IS NULL OR t.status = CAST(:taskStatus AS funding_task_status)))""");
+            params.put("taskCategory", f.taskCategory());
+            params.put("taskStatus", f.taskStatus());
+        }
+        params.put("limit", Math.min(Math.max(limit, 1), 200));
+        params.put("offset", Math.max(offset, 0));
+
+        String sql = "SELECT " + APP_COLS + " FROM applications"
+                + (where.isEmpty() ? "" : " WHERE " + String.join(" AND ", where))
+                + " ORDER BY submitted_at DESC LIMIT :limit OFFSET :offset";
+        return jdbc.sql(sql).params(params).query(Application.class).list();
     }
 
     public Optional<Application> findApplication(String applicationId) {
