@@ -79,6 +79,31 @@ Paste these into GraphiQL. The ids below exist in the `funding-db` seed data.
 
 `applications` also accepts `dealerId`, `limit` (max 200) and `offset`. Results are sorted newest first by `submittedAt`.
 
+All `applications` filters are optional and combine with AND:
+
+| Argument | Matches |
+|----------|---------|
+| `status` | One status |
+| `statuses` | Any of a list of statuses (intersected with `status` if both are given) |
+| `dealerId` | One dealer |
+| `search` | Case-insensitive partial match on `applicationId` or `dealNumber` (`%` and `_` are literal) |
+| `taskCategory`, `taskStatus` | Applications with at least one task matching both |
+
+**Unfunded applications with a VIN discrepancy**
+```graphql
+{
+  applications(
+    statuses: [READY_TO_FUND, PENDING_STIPULATIONS, PENDING_AGENT_VERIFICATION, EXCEPTION_HOLD]
+    taskCategory: VIN_VERIFICATION
+    taskStatus: DISCREPANCY_FLAGGED
+  ) {
+    applicationId
+    dealNumber
+    status
+  }
+}
+```
+
 **One application with everything attached**
 ```graphql
 {
